@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/txtStatus"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Status: Ready"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/btnSlot1"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="24dp"
+        android:text="Dispense Slot 1"
+        app:layout_constraintTop_toBottomOf="@id/txtStatus"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnSlot2"
+        android:layout_marginEnd="8dp"/>
+
+    <Button
+        android:id="@+id/btnSlot2"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="Dispense Slot 2"
+        app:layout_constraintTop_toTopOf="@id/btnSlot1"
+        app:layout_constraintStart_toEndOf="@id/btnSlot1"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="8dp"/>
+
+    <Button
+        android:id="@+id/btnSlot3"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="16dp"
+        android:text="Dispense Slot 3"
+        app:layout_constraintTop_toBottomOf="@id/btnSlot1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnSlot4"
+        android:layout_marginEnd="8dp"/>
+
+    <Button
+        android:id="@+id/btnSlot4"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="Dispense Slot 4"
+        app:layout_constraintTop_toTopOf="@id/btnSlot3"
+        app:layout_constraintStart_toEndOf="@id/btnSlot3"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="8dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
