@@ -33,9 +33,6 @@ public class SerialPortManager {
         registerUsbReceiver();
     }
 
-    /**
-     * Asynchronously discovers and connects to the 102 Board.
-     */
     public synchronized void discoverAndConnect() {
         if (isProbing.get() || activePort != null) return;
 

@@ -15,7 +15,7 @@ public class PollStatusResponse {
         }
 
         int expectedCrc = CRC16Util.calculate(frame, 0, 18);
-        int actualCrc = ((frame[18] & 0xFF) << 8) | (frame[19] & 0xFF);
+        int actualCrc = (frame[18] & 0xFF) | ((frame[19] & 0xFF) << 8); // Low-byte first, High-byte second
         if (expectedCrc != actualCrc) {
             throw new IllegalArgumentException("CRC Mismatch");
         }
@@ -24,8 +24,8 @@ public class PollStatusResponse {
         this.status = frame[2] & 0xFF;
         this.motorNum = frame[3] & 0xFF;
         this.errorCode = frame[4] & 0xFF;
-        this.peakCurrentMa = ((frame[5] & 0xFF) << 8 | (frame[6] & 0xFF)) * 10;
-        this.avgCurrentMa = ((frame[7] & 0xFF) << 8 | (frame[8] & 0xFF)) * 10;
-        this.runTimeMs = ((frame[9] & 0xFF) << 8 | (frame[10] & 0xFF)) * 100;
+        this.peakCurrentMa = ((frame[5] & 0xFF) << 8) | (frame[6] & 0xFF);
+        this.avgCurrentMa = ((frame[7] & 0xFF) << 8) | (frame[8] & 0xFF);
+        this.runTimeMs = ((frame[9] & 0xFF) << 8) | (frame[10] & 0xFF);
     }
 }
