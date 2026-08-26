@@ -8,6 +8,7 @@ public class PollStatusResponse {
     public final int peakCurrentMa;
     public final int avgCurrentMa;
     public final int runTimeMs;
+    public final int lightCurtainMs; // Z10: 1-byte field (0 = no drop, 1-200ms = drop signal time)
 
     public PollStatusResponse(byte[] frame) {
         if (frame == null || frame.length < 20) {
@@ -27,5 +28,6 @@ public class PollStatusResponse {
         this.peakCurrentMa = ((frame[5] & 0xFF) << 8) | (frame[6] & 0xFF);
         this.avgCurrentMa = ((frame[7] & 0xFF) << 8) | (frame[8] & 0xFF);
         this.runTimeMs = ((frame[9] & 0xFF) << 8) | (frame[10] & 0xFF);
+        this.lightCurtainMs = frame[11] & 0xFF;
     }
 }

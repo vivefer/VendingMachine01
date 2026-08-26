@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/admin_title"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/admin_select_slot"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerSlots"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <!-- Quick Actions Button Bar 1 -->
+        <LinearLayout
+            style="?android:attr/buttonBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <Button
+                android:id="@+id/btnTestDispense"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/admin_test_dispense" />
+
+            <Button
+                android:id="@+id/btnPollStatus"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/admin_poll_status" />
+        </LinearLayout>
+
+        <!-- Quick Actions Button Bar 2 -->
+        <LinearLayout
+            style="?android:attr/buttonBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <Button
+                android:id="@+id/btnReadTemp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/admin_read_temp" />
+
+            <Button
+                android:id="@+id/btnReadDI"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/admin_read_di" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="12dp"
+            android:background="#CCCCCC" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/admin_editor_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Field 1: Slot ID -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/admin_slot_id_label"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtSlotId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="username"
+            android:hint="@string/admin_slot_id_hint"
+            android:inputType="text" />
+
+        <!-- Field 2: Card Address -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/admin_card_address_label"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerCardAddress"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <!-- Field 3: Motor Number (0..79) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/admin_motor_index_label"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerMotorIndex"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <!-- Field 4: Motor Type -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/admin_motor_type_label"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerMotorType"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <!-- Field 5: Light Curtain Mode -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/admin_light_curtain_label"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerLightCurtain"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <!-- Save / Delete Button Bar -->
+        <LinearLayout
+            style="?android:attr/buttonBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <Button
+                android:id="@+id/btnSaveSlot"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/admin_btn_save" />
+
+            <Button
+                android:id="@+id/btnDeleteSlot"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/admin_btn_delete" />
+        </LinearLayout>
+
+        <!-- Log Output -->
+        <TextView
+            android:id="@+id/txtAdminLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#EFEFEF"
+            android:padding="8dp"
+            android:text="@string/admin_log_placeholder" />
+
+    </LinearLayout>
+</ScrollView>

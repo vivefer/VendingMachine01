@@ -1,17 +1,23 @@
 package com.example.vmcontroltemplate
 
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import driver102.Command
+import admin.AdminDialogFragment
+import config.SlotConfigRepository
+import controller.VmcController
 import driver102.SerialPortManager
-import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
     private var serialManager: SerialPortManager? = null
+    private lateinit var vmcController: VmcController
+    private lateinit var configRepository: SlotConfigRepository
     private lateinit var txtStatus: TextView
+
+    private lateinit var slotButtons: List<Button>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,38 +25,68 @@ class MainActivity : AppCompatActivity() {
 
         txtStatus = findViewById(R.id.txtStatus)
 
-        // Set click handlers for testing motor slots
-        findViewById<Button>(R.id.btnSlot1).setOnClickListener { dispenseItem(0) }
-        findViewById<Button>(R.id.btnSlot2).setOnClickListener { dispenseItem(1) }
-        findViewById<Button>(R.id.btnSlot3).setOnClickListener { dispenseItem(2) }
-        findViewById<Button>(R.id.btnSlot4).setOnClickListener { dispenseItem(3) }
+        // Bind main activity slot buttons in order
+        slotButtons = listOf(
+            findViewById(R.id.btnSlot1),
+            findViewById(R.id.btnSlot2),
+            findViewById(R.id.btnSlot3),
+            findViewById(R.id.btnSlot4)
+        )
 
-        // Initialize USB SerialPortManager using Android context
+        // Init low-level driver & high-level controllers
         serialManager = SerialPortManager(this)
+        configRepository = SlotConfigRepository(this)
+        vmcController = VmcController(serialManager!!, configRepository)
 
-        // Auto-discover and connect/probe the 102 board asynchronously
+        // Setup initial UI button state
+        refreshSlotButtons()
+
+        // Hidden trigger: Long press status text to open Admin Panel
+        txtStatus.setOnLongClickListener {
+            val adminDialog = AdminDialogFragment(vmcController, configRepository) {
+                refreshSlotButtons()
+                updateStatusText("Slot configurations updated.")
+            }
+            adminDialog.show(supportFragmentManager, "admin_panel")
+            true
+        }
+
         serialManager?.discoverAndConnect()
     }
 
-    private fun dispenseItem(motorNumber: Byte) {
-        val manager = serialManager
-        if (manager == null || !manager.isConnected) {
+    private fun refreshSlotButtons() {
+        val configuredSlots = configRepository.getSlots()
+
+        slotButtons.forEachIndexed { index, button ->
+            if (index < configuredSlots.size) {
+                val slot = configuredSlots[index]
+                button.text = slot.slotId
+                button.visibility = View.VISIBLE
+                button.setOnClickListener { dispense(slot.slotId) }
+            } else {
+                // Hide extra layout buttons if fewer slots exist in config
+                button.visibility = View.GONE
+                button.setOnClickListener(null)
+            }
+        }
+    }
+
+    private fun dispense(slotId: String) {
+        if (serialManager?.isConnected != true) {
             updateStatusText(getString(R.string.status_not_connected))
             return
         }
 
-        updateStatusText(getString(R.string.status_sending_command, motorNumber.toInt()))
+        updateStatusText("Triggering $slotId...")
+        vmcController.dispenseSlot(slotId, object : VmcController.ResultCallback<String> {
+            override fun onSuccess(data: String) {
+                updateStatusText(data)
+            }
 
-        // Param 1: Card/Box Address (1)
-        // Param 2: Motor Number (1..4)
-        // Param 3: Motor Type -> 0 for 3-Wire Motor
-        val frame = Command.startPoll(1.toByte(), motorNumber, 3.toByte())
-
-        try {
-            manager.sendBytes(frame)
-        } catch (e: IOException) {
-            updateStatusText(getString(R.string.status_send_error, e.message ?: ""))
-        }
+            override fun onError(error: String) {
+                updateStatusText(error)
+            }
+        })
     }
 
     private fun updateStatusText(message: String) {
@@ -61,7 +97,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clean up USB broadcast receiver and close active serial ports
         serialManager?.unregisterReceiver()
         serialManager?.disconnect()
     }

@@ -24,11 +24,11 @@ public class Command {
         return frame;
     }
 
-    public static byte[] startPoll(byte box, byte motorNum, byte motorType) {
+    public static byte[] startPoll(byte box, byte motorNum, byte motorType, byte lightCurtainMode) {
         byte[] params = new byte[16];
         params[0] = motorNum;
         params[1] = motorType;
-        params[2] = 0x00;
+        params[2] = lightCurtainMode; // Y3: 0=Disabled, 1=Ordinary, 2=Priority
         params[3] = 0x00;
         params[4] = 0x00;
         params[5] = 0x00;

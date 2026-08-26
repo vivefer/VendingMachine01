@@ -126,4 +126,44 @@ public class SerialPortManager {
             }
         }
     };
+    /**
+     * Synchronously sends frame and waits for a 20-byte response frame.
+     */
+    public synchronized byte[] sendAndReceive(byte[] data, int timeoutMs) throws IOException {
+        if (activePort == null) {
+            throw new IOException("102 Board is not connected.");
+        }
+
+        // Flush stale data
+        byte[] flush = new byte[256];
+        activePort.read(flush, 20);
+
+        // Send TX
+        activePort.write(data, timeoutMs);
+
+        // Accumulate RX
+        byte[] fullBuffer = new byte[64];
+        int totalBytesRead = 0;
+        long startTime = System.currentTimeMillis();
+
+        while (totalBytesRead < 20 && (System.currentTimeMillis() - startTime) < timeoutMs) {
+            byte[] tempBuf = new byte[32];
+            int len = activePort.read(tempBuf, 50);
+            if (len > 0) {
+                System.arraycopy(tempBuf, 0, fullBuffer, totalBytesRead, len);
+                totalBytesRead += len;
+            }
+        }
+
+        if (totalBytesRead >= 20) {
+            byte[] response = java.util.Arrays.copyOf(fullBuffer, 20);
+            if (Command.verifyResponseCrc(response)) {
+                return response;
+            } else {
+                throw new IOException("Response failed CRC validation");
+            }
+        }
+
+        throw new IOException("Timeout waiting for 20-byte response frame");
+    }
 }

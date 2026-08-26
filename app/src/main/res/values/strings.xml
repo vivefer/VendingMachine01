@@ -1,8 +1,35 @@
 <resources>
     <string name="app_name">VMControlTemplate</string>
+    <string name="status_not_connected">Status: Board Not Connected</string>
+    <string name="status_sending_command">Sending dispense command to motor %1$d...</string>
+    <string name="status_send_error">Send Error: %1$s</string>
 
-    <!-- Motor Test Status Strings -->
-    <string name="status_not_connected">102 Board is not connected or verified.</string>
-    <string name="status_sending_command">Sending command to Motor #%1$d…</string>
-    <string name="status_send_error">Failed to send command: %1$s</string>
+    <!-- Admin Panel Strings -->
+    <string name="admin_title">VMC Admin &amp; Test Panel</string>
+    <string name="admin_select_slot">Select Existing Slot:</string>
+    <string name="admin_test_dispense">Test Dispense</string>
+    <string name="admin_poll_status">Poll Status</string>
+    <string name="admin_read_temp">Read Temp</string>
+    <string name="admin_read_di">Read DI</string>
+    <string name="admin_editor_title">Slot Configuration Editor</string>
+    <string name="admin_slot_id_label">Slot Name / Identifier (Free Input):</string>
+    <string name="admin_slot_id_hint">e.g. Slot 1, A1, B10</string>
+    <string name="admin_card_address_label">Board / Card Address:</string>
+    <string name="admin_motor_index_label">Motor Index (Range: 0 to 79):</string>
+    <string name="admin_motor_type_label">Motor Wiring Type:</string>
+    <string name="admin_light_curtain_label">Enable Light Curtain (Drop Sensor Detection)</string>
+    <string name="admin_btn_save">Save / Update</string>
+    <string name="admin_btn_delete">Delete Slot</string>
+    <string name="admin_log_placeholder">Status / Log Output</string>
+
+    <!-- Dynamic Kotlin Output Strings -->
+    <string name="admin_err_empty_id">Error: Slot ID cannot be empty.</string>
+    <string name="admin_log_saved">Saved \'%1$s\' (Card %2$d, Motor %3$d).</string>
+    <string name="admin_log_deleted">Deleted \'%1$s\'.</string>
+    <string name="admin_log_error">ERROR: %1$s</string>
+    <string name="admin_motor_type_3wire">3-Wire Motor (Default)</string>
+    <string name="admin_motor_type_2wire">2-Wire Motor</string>
+    <string name="admin_motor_type_solenoid">Lock / Solenoid</string>
+    <string name="admin_box_label">Box %1$d</string>
+    <string name="admin_motor_label">Motor %1$d</string>
 </resources>
