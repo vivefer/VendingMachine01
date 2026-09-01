@@ -111,7 +111,52 @@
             android:hint="@string/admin_slot_id_hint"
             android:inputType="text" />
 
-        <!-- Field 2: Card Address -->
+        <!-- Field 2: Item Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Item Name"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtItemName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="e.g. Cola"
+            android:inputType="text" />
+
+        <!-- Field 3: Price -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Price ($)"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtPrice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="0.00"
+            android:inputType="numberDecimal" />
+
+        <!-- Field 4: Stock -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Stock Quantity"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtStock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="0"
+            android:inputType="number" />
+
+        <!-- Field 5: Card Address -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -124,7 +169,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp" />
 
-        <!-- Field 3: Motor Number (0..79) -->
+        <!-- Field 6: Motor Number (0..79) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -137,7 +182,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp" />
 
-        <!-- Field 4: Motor Type -->
+        <!-- Field 7: Motor Type -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -150,7 +195,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp" />
 
-        <!-- Field 5: Light Curtain Mode -->
+        <!-- Field 8: Light Curtain Mode -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
