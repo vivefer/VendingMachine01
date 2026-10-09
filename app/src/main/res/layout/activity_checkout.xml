@@ -66,10 +66,19 @@
             android:visibility="gone" />
 
         <TextView
-            android:id="@+id/txtDispenseStatus"
+            android:id="@+id/txtTransactionId"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <TextView
+            android:id="@+id/txtDispenseStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:textSize="16sp"
             android:textStyle="bold" />
 

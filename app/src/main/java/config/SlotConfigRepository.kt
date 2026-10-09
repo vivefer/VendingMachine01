@@ -22,10 +22,10 @@ class SlotConfigRepository(context: Context) {
                     else -> 0.toByte()
                 }
 
-                // Graceful migration fallback defaults for legacy JSON records
                 val itemName = if (obj.has("itemName")) obj.getString("itemName") else ""
                 val price = if (obj.has("price")) obj.getDouble("price") else 0.0
                 val stock = if (obj.has("stock")) obj.getInt("stock") else 0
+                val reservedStock = if (obj.has("reservedStock")) obj.getInt("reservedStock") else 0
 
                 list.add(
                     SlotConfig(
@@ -36,7 +36,8 @@ class SlotConfigRepository(context: Context) {
                         lightCurtainMode = lightCurtain,
                         itemName = itemName,
                         price = price,
-                        stock = stock
+                        stock = stock,
+                        reservedStock = reservedStock
                     )
                 )
             }
@@ -55,21 +56,34 @@ class SlotConfigRepository(context: Context) {
             obj.put("motorIndex", s.motorIndex.toInt())
             obj.put("motorType", s.motorType.toInt())
             obj.put("lightCurtainMode", s.lightCurtainMode.toInt())
-            obj.put("useLightScreen", s.lightCurtainMode > 0) // Maintain legacy key compatibility
+            obj.put("useLightScreen", s.lightCurtainMode > 0)
             obj.put("itemName", s.itemName)
             obj.put("price", s.price)
             obj.put("stock", s.stock)
+            obj.put("reservedStock", s.reservedStock)
             array.put(obj)
         }
         prefs.edit().putString("slots_key", array.toString()).apply()
     }
 
+    fun adjustReservedStock(slotId: String, delta: Int) {
+        val slots = getSlots().toMutableList()
+        val index = slots.indexOfFirst { it.slotId == slotId }
+        if (index >= 0) {
+            val updated = slots[index].copy(
+                reservedStock = (slots[index].reservedStock + delta).coerceAtLeast(0)
+            )
+            slots[index] = updated
+            saveSlots(slots)
+        }
+    }
+
     fun getDefaultSlots(): List<SlotConfig> {
         return listOf(
-            SlotConfig("Slot 1", cardAddress = 1, motorIndex = 0, motorType = 3, lightCurtainMode = 0, itemName = "Item 1", price = 1.50, stock = 10),
-            SlotConfig("Slot 2", cardAddress = 1, motorIndex = 1, motorType = 3, lightCurtainMode = 0, itemName = "Item 2", price = 2.00, stock = 10),
-            SlotConfig("Slot 3", cardAddress = 1, motorIndex = 2, motorType = 3, lightCurtainMode = 0, itemName = "Item 3", price = 2.50, stock = 10),
-            SlotConfig("Slot 4", cardAddress = 1, motorIndex = 3, motorType = 3, lightCurtainMode = 0, itemName = "Item 4", price = 3.00, stock = 10)
+            SlotConfig("Slot 1", cardAddress = 1, motorIndex = 0, motorType = 3, lightCurtainMode = 0, itemName = "Item 1", price = 1.50, stock = 10, reservedStock = 0),
+            SlotConfig("Slot 2", cardAddress = 1, motorIndex = 1, motorType = 3, lightCurtainMode = 0, itemName = "Item 2", price = 2.00, stock = 10, reservedStock = 0),
+            SlotConfig("Slot 3", cardAddress = 1, motorIndex = 2, motorType = 3, lightCurtainMode = 0, itemName = "Item 3", price = 2.50, stock = 10, reservedStock = 0),
+            SlotConfig("Slot 4", cardAddress = 1, motorIndex = 3, motorType = 3, lightCurtainMode = 0, itemName = "Item 4", price = 3.00, stock = 10, reservedStock = 0)
         )
     }
 }

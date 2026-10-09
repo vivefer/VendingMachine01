@@ -18,10 +18,11 @@ import androidx.fragment.app.DialogFragment
 import com.example.vmcontroltemplate.R
 import config.SlotConfig
 import config.SlotConfigRepository
-import controller.VmcController
+import controller.IVmcController
+import vmappui.model.ClaimManager
 
 class AdminDialogFragment(
-    private val vmcController: VmcController,
+    private val vmcController: IVmcController,
     private val configRepo: SlotConfigRepository,
     private val onSlotsUpdated: (() -> Unit)? = null
 ) : DialogFragment() {
@@ -37,6 +38,8 @@ class AdminDialogFragment(
     private lateinit var spinnerLightCurtain: Spinner
     private lateinit var txtLog: TextView
 
+    private lateinit var claimManager: ClaimManager
+
     private var slotsList = mutableListOf<SlotConfig>()
 
     private val cardAddressOptions = (1..8).toList()
@@ -51,6 +54,7 @@ class AdminDialogFragment(
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.dialog_admin, container, false)
+        claimManager = ClaimManager(requireContext())
 
         ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -88,7 +92,6 @@ class AdminDialogFragment(
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, position: Int, id: Long) {
                 hideKeyboard()
                 if (position == 0) {
-                    // Selected "-- Add New Slot --"
                     clearFormForNewSlot()
                 } else {
                     val actualIndex = position - 1
@@ -145,14 +148,12 @@ class AdminDialogFragment(
             val actualIndex = spinnerPos - 1
             val isCreatingNew = actualIndex !in slotsList.indices
 
-            // Duplicate Prevention: Check if the new ID exists on a DIFFERENT slot
             val duplicateIndex = slotsList.indexOfFirst { it.slotId.equals(newId, ignoreCase = true) }
             if (duplicateIndex >= 0 && duplicateIndex != actualIndex) {
                 txtLog.text = "Error: Slot ID '$newId' already exists."
                 return@setOnClickListener
             }
 
-            // Per-board slot cap validation (max 80 per card address)
             if (isCreatingNew) {
                 val slotsOnThisBoard = slotsList.count { it.cardAddress == card }
                 if (slotsOnThisBoard >= MAX_SLOTS_PER_BOARD) {
@@ -160,6 +161,8 @@ class AdminDialogFragment(
                     return@setOnClickListener
                 }
             }
+
+            val existingReserved = if (!isCreatingNew) slotsList[actualIndex].reservedStock else 0
 
             val newSlot = SlotConfig(
                 slotId = newId,
@@ -169,7 +172,8 @@ class AdminDialogFragment(
                 lightCurtainMode = lightCurtainMode,
                 itemName = itemName,
                 price = price,
-                stock = stock
+                stock = stock,
+                reservedStock = existingReserved
             )
 
             if (!isCreatingNew) {
@@ -181,10 +185,9 @@ class AdminDialogFragment(
             configRepo.saveSlots(slotsList)
             refreshSlotSpinner()
 
-            // Select newly saved slot in the spinner
             val updatedPosition = slotsList.indexOfFirst { it.slotId == newId }
             if (updatedPosition >= 0) {
-                spinnerSlots.setSelection(updatedPosition + 1) // +1 due to ADD_NEW_LABEL at index 0
+                spinnerSlots.setSelection(updatedPosition + 1)
             }
 
             txtLog.text = getString(R.string.admin_log_saved, newId, card.toInt(), motor.toInt())
@@ -232,7 +235,23 @@ class AdminDialogFragment(
             vmcController.readDI(card, createCallback())
         }
 
+        renderExpiredAndRefundClaims()
+
         return view
+    }
+
+    private fun renderExpiredAndRefundClaims() {
+        val claims = claimManager.getAdminVisibilityClaims()
+        if (claims.isEmpty()) {
+            txtLog.text = "No pending EXPIRED or REFUND_REQUESTED claims."
+            return
+        }
+
+        val sb = StringBuilder("--- Unresolved/Expired Claims ---\n")
+        for (c in claims) {
+            sb.append("TX: ${c.transactionId} | Status: ${c.status} | Items: ${c.undispensedItemsJson}\n")
+        }
+        txtLog.text = sb.toString()
     }
 
     override fun onStart() {
@@ -317,7 +336,7 @@ class AdminDialogFragment(
         spinnerSlots.adapter = adapter
     }
 
-    private fun createCallback() = object : VmcController.ResultCallback<String> {
+    private fun createCallback() = object : IVmcController.ResultCallback<String> {
         override fun onSuccess(data: String) {
             activity?.runOnUiThread { txtLog.text = data }
         }

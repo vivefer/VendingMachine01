@@ -11,7 +11,8 @@ import java.util.concurrent.LinkedBlockingQueue
 class VmcController(
     private val serialManager: SerialPortManager,
     private val configRepository: SlotConfigRepository
-) {
+) : IVmcController {
+
     private val executor = Executors.newSingleThreadExecutor()
     private val dispenseQueue = LinkedBlockingQueue<DispenseTask>()
     @Volatile
@@ -19,22 +20,16 @@ class VmcController(
 
     private data class DispenseTask(
         val slot: SlotConfig,
-        val callback: ResultCallback<String>
+        val callback: IVmcController.ResultCallback<String>
     )
 
-    interface ResultCallback<T> {
-        fun onSuccess(data: T)
-        fun onError(error: String)
-    }
-
-    fun dispenseSlot(slotId: String, callback: ResultCallback<String>) {
+    override fun dispenseSlot(slotId: String, callback: IVmcController.ResultCallback<String>) {
         val slot = configRepository.getSlots().firstOrNull { it.slotId == slotId }
         if (slot == null) {
             callback.onError("Slot $slotId not configured.")
             return
         }
 
-        // Add task to FIFO queue
         dispenseQueue.offer(DispenseTask(slot, callback))
         processNextTask()
     }
@@ -50,7 +45,7 @@ class VmcController(
                 executeDispenseLifecycle(task)
             }
             isProcessingQueue = false
-            processNextTask() // Automatically pick up next enqueued task
+            processNextTask()
         }
     }
 
@@ -59,7 +54,6 @@ class VmcController(
         val callback = task.callback
 
         try {
-            // Step 1: Send Start Motor Command (0x05)
             val startFrame = Command.startPoll(
                 slot.cardAddress,
                 slot.motorIndex,
@@ -67,11 +61,8 @@ class VmcController(
                 slot.lightCurtainMode
             )
             serialManager.sendBytes(startFrame)
-
-            // Mandatory 50ms pause per manual spec (Section 6)
             Thread.sleep(50)
 
-            // Step 2: Poll hardware until motor completes rotation (Status == 2) or errors out
             val maxWaitMs = 6_000L
             val startTime = System.currentTimeMillis()
             var isRunning = true
@@ -80,16 +71,13 @@ class VmcController(
             while (isRunning && (System.currentTimeMillis() - startTime) < maxWaitMs) {
                 try {
                     val queryFrame = Command.queryPollStatus(slot.cardAddress)
-                    // Reduced read timeout to 150ms to prevent long gaps
                     val responseBytes = serialManager.sendAndReceive(queryFrame, 150)
                     val statusResponse = PollStatusResponse(responseBytes)
                     finalResponse = statusResponse
 
-                    // Section 8.2: Status 2 = finished, Status 0 = idle (motor stopped/done)
                     if (statusResponse.status == 2 || (statusResponse.status == 0 && (System.currentTimeMillis() - startTime) > 500)) {
                         isRunning = false
                     } else {
-                        // Mandatory 50ms pause between poll requests
                         Thread.sleep(50)
                     }
                 } catch (_: Exception) {
@@ -112,7 +100,7 @@ class VmcController(
         }
     }
 
-    fun pollStatus(boxAddress: Byte, callback: ResultCallback<String>) {
+    override fun pollStatus(boxAddress: Byte, callback: IVmcController.ResultCallback<String>) {
         executor.execute {
             try {
                 val frame = Command.queryPollStatus(boxAddress)
@@ -127,7 +115,7 @@ class VmcController(
         }
     }
 
-    fun readTemperature(boxAddress: Byte, callback: ResultCallback<String>) {
+    override fun readTemperature(boxAddress: Byte, callback: IVmcController.ResultCallback<String>) {
         executor.execute {
             try {
                 val frame = Command.readTemperature(boxAddress)
@@ -140,7 +128,7 @@ class VmcController(
         }
     }
 
-    fun readDI(boxAddress: Byte, callback: ResultCallback<String>) {
+    override fun readDI(boxAddress: Byte, callback: IVmcController.ResultCallback<String>) {
         executor.execute {
             try {
                 val frame = Command.readDI(boxAddress)
@@ -152,7 +140,7 @@ class VmcController(
         }
     }
 
-    fun writeDO(boxAddress: Byte, channel: Byte, state: Byte, callback: ResultCallback<String>) {
+    override fun writeDO(boxAddress: Byte, channel: Byte, state: Byte, callback: IVmcController.ResultCallback<String>) {
         executor.execute {
             try {
                 val frame = Command.writeDO(boxAddress, channel, state)

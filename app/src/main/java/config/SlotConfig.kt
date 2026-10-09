@@ -8,5 +8,9 @@ data class SlotConfig(
     val lightCurtainMode: Byte = 0, // 0=Disabled, 1=Ordinary, 2=Curtain check
     val itemName: String = "",
     val price: Double = 0.0,
-    val stock: Int = 0
-)
+    val stock: Int = 0,
+    val reservedStock: Int = 0   // Reserved stock for pending partial order claims
+) {
+    val availableStock: Int
+        get() = (stock - reservedStock).coerceAtLeast(0)
+}

@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- Header & Admin Button -->
+    <!-- Header & Action Buttons -->
     <TextView
         android:id="@+id/txtCatalogHeader"
         android:layout_width="wrap_content"
@@ -21,6 +21,14 @@
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
         android:text="Admin" />
+
+    <Button
+        android:id="@+id/btnClaimPartial"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toStartOf="@id/btnAdminAccess"
+        android:layout_marginEnd="8dp"
+        android:text="Claim Partial Order" />
 
     <View
         android:id="@+id/headerDivider"
@@ -45,8 +53,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingTop="8dp">
 
         <TextView

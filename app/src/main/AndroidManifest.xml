@@ -14,9 +14,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.VMControlTemplate">
 
-        <!-- Entry Point: LoginActivity -->
+
+        <!-- Entry Point: CatalogActivity -->
         <activity
-            android:name="vmappui.ui.LoginActivity"
+            android:name="vmappui.ui.CatalogActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,18 +32,10 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
-
-        <activity
-            android:name="vmappui.ui.CatalogActivity"
-            android:exported="false" />
-
         <activity
             android:name="vmappui.ui.CheckoutActivity"
             android:exported="false" />
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
 
     </application>
 

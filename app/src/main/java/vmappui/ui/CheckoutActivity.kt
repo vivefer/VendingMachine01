@@ -4,22 +4,32 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.vmcontroltemplate.R
+import config.AppConfig
 import config.SlotConfigRepository
-import controller.VmcController
+import controller.IVmcController
+import controller.VmcControllerFactory
 import driver102.SerialPortManager
+import vmappui.model.ClaimManager
+import vmappui.model.DispenseOutcome
 import vmappui.model.FulfillmentInfo
 import vmappui.model.FulfillmentState
+import vmappui.model.ItemFulfillmentOutcome
 import vmappui.model.OrderItem
 import vmappui.model.PaymentInfo
-import vmappui.model.PaymentStatus
+import vmappui.model.PaymentProvider
+import vmappui.model.PaymentProviderFactory
+import vmappui.model.Session
 import vmappui.model.SyncStatus
 import vmappui.model.TransactionRecord
 import vmappui.model.TransactionRepository
@@ -29,11 +39,14 @@ class CheckoutActivity : AppCompatActivity() {
 
     private lateinit var configRepository: SlotConfigRepository
     private var serialManager: SerialPortManager? = null
-    private var vmcController: VmcController? = null
+    private lateinit var vmcController: IVmcController
+    private lateinit var paymentProvider: PaymentProvider
+    private lateinit var claimManager: ClaimManager
 
     private lateinit var containerOrderItems: LinearLayout
     private lateinit var txtUserPhone: TextView
     private lateinit var txtCheckoutTotal: TextView
+    private lateinit var txtTransactionId: TextView
     private lateinit var txtDispenseStatus: TextView
     private lateinit var btnSimulatePayment: Button
     private lateinit var btnDone: Button
@@ -42,12 +55,16 @@ class CheckoutActivity : AppCompatActivity() {
     private val orderItems = mutableListOf<OrderItem>()
     private var totalAmount = 0.0
     private var phone: String = ""
+    private var currentTransactionId: String = ""
+    private lateinit var currentPaymentInfo: PaymentInfo
 
     private class DispenseTask(
-        val slotId: String
+        val slotId: String,
+        val unitIndex: Int
     )
 
     private val dispenseQueue = mutableListOf<DispenseTask>()
+    private val itemOutcomes = mutableListOf<ItemFulfillmentOutcome>()
 
     private val autoLogoutHandler = Handler(Looper.getMainLooper())
     private val AUTO_LOGOUT_DELAY_MS = 3000L
@@ -58,32 +75,36 @@ class CheckoutActivity : AppCompatActivity() {
 
         configRepository = SlotConfigRepository(this)
         serialManager = SerialPortManager(this)
-        vmcController = VmcController(serialManager!!, configRepository)
+        vmcController = VmcControllerFactory.create(serialManager!!, configRepository)
+        paymentProvider = PaymentProviderFactory.create()
+        claimManager = ClaimManager(this)
 
         containerOrderItems = findViewById(R.id.containerOrderItems)
         txtUserPhone = findViewById(R.id.txtUserPhone)
         txtCheckoutTotal = findViewById(R.id.txtCheckoutTotal)
+        txtTransactionId = findViewById(R.id.txtTransactionId)
         txtDispenseStatus = findViewById(R.id.txtDispenseStatus)
         btnSimulatePayment = findViewById(R.id.btnSimulatePayment)
         btnDone = findViewById(R.id.btnDone)
         progressDispense = findViewById(R.id.progressDispense)
 
-        phone = intent.getStringExtra("EXTRA_PHONE") ?: "Guest"
-        txtUserPhone.text = "Customer Phone: $phone"
+        txtUserPhone.text = "Customer Phone: Not provided"
 
         parseIntentData()
         renderOrderSummary()
 
         btnSimulatePayment.setOnClickListener {
-            processPaymentAndDispense()
+            promptPhoneAndPay()
         }
 
         btnDone.setOnClickListener {
             autoLogoutHandler.removeCallbacksAndMessages(null)
-            navigateToLogin()
+            navigateToCatalog()
         }
 
-        serialManager?.discoverAndConnect()
+        if (!AppConfig.USE_MOCK_HARDWARE) {
+            serialManager?.discoverAndConnect()
+        }
     }
 
     private fun parseIntentData() {
@@ -131,50 +152,120 @@ class CheckoutActivity : AppCompatActivity() {
     private fun processPaymentAndDispense() {
         btnSimulatePayment.isEnabled = false
         progressDispense.visibility = View.VISIBLE
-        txtDispenseStatus.text = "Simulating Payment..."
+        txtDispenseStatus.text = "Processing Payment..."
 
-        val paymentInfo = PaymentInfo(
-            status = PaymentStatus.RECEIVED,
-            amount = totalAmount,
-            provider = "MOCK_PAYMENT_GATEWAY",
-            provider_ref = "TXN_${UUID.randomUUID().toString().take(8)}"
-        )
+        paymentProvider.processPayment(totalAmount, object : PaymentProvider.PaymentCallback {
+            override fun onSuccess(paymentInfo: PaymentInfo) {
+                currentPaymentInfo = paymentInfo
+                currentTransactionId = UUID.randomUUID().toString()
 
-        dispenseQueue.clear()
-        for (item in orderItems) {
-            for (i in 0 until item.qty) {
-                dispenseQueue.add(DispenseTask(item.item_id))
+                txtTransactionId.text = "Transaction ID: $currentTransactionId"
+
+                dispenseQueue.clear()
+                itemOutcomes.clear()
+
+                for (item in orderItems) {
+                    for (i in 0 until item.qty) {
+                        dispenseQueue.add(DispenseTask(item.item_id, i))
+                        itemOutcomes.add(ItemFulfillmentOutcome(item.item_id, i, DispenseOutcome.PENDING))
+                    }
+                }
+
+                val record = TransactionRecord(
+                    transaction_id = currentTransactionId,
+                    time = System.currentTimeMillis(),
+                    sync_status = SyncStatus.PENDING,
+                    order = orderItems,
+                    payment = paymentInfo,
+                    fulfillment = FulfillmentInfo(state = FulfillmentState.IN_PROGRESS, itemOutcomes = itemOutcomes),
+                    phone = phone.ifEmpty { null }
+                )
+                TransactionRepository(this@CheckoutActivity).saveTransaction(record)
+
+                txtDispenseStatus.text = "Payment Received!\nStarting Dispense..."
+                executeNextDispenseStep(0)
             }
-        }
 
-        txtDispenseStatus.text = "Payment Received! Starting Dispense sequence..."
-        executeNextDispenseStep(paymentInfo, 0)
+            override fun onError(error: String) {
+                progressDispense.visibility = View.GONE
+                btnSimulatePayment.isEnabled = true
+                txtDispenseStatus.text = "Payment Error: $error"
+            }
+        })
     }
 
-    private fun executeNextDispenseStep(paymentInfo: PaymentInfo, stepIndex: Int) {
+    private fun executeNextDispenseStep(stepIndex: Int) {
         if (stepIndex >= dispenseQueue.size) {
-            completeTransaction(paymentInfo, FulfillmentState.DONE, null)
+            finalizeTransaction()
             return
         }
 
         val task = dispenseQueue[stepIndex]
-        txtDispenseStatus.text = "Dispensing unit ${stepIndex + 1} of ${dispenseQueue.size} (Slot: ${task.slotId})..."
+        txtDispenseStatus.text = "Dispensing unit ${stepIndex + 1} of ${dispenseQueue.size} (${task.slotId})..."
 
-        vmcController?.dispenseSlot(task.slotId, object : VmcController.ResultCallback<String> {
+        vmcController.dispenseSlot(task.slotId, object : IVmcController.ResultCallback<String> {
             override fun onSuccess(data: String) {
                 runOnUiThread {
                     decrementStock(task.slotId, 1)
-                    executeNextDispenseStep(paymentInfo, stepIndex + 1)
+                    itemOutcomes[stepIndex] = ItemFulfillmentOutcome(task.slotId, task.unitIndex, DispenseOutcome.SUCCESS)
+                    updateTransactionProgress()
+                    executeNextDispenseStep(stepIndex + 1)
                 }
             }
 
             override fun onError(error: String) {
                 runOnUiThread {
-                    txtDispenseStatus.text = "Dispense failed on slot ${task.slotId}: $error"
-                    completeTransaction(paymentInfo, FulfillmentState.FAILED, -1)
+                    txtDispenseStatus.text = "Dispense failed on ${task.slotId}: $error"
+                    itemOutcomes[stepIndex] = ItemFulfillmentOutcome(task.slotId, task.unitIndex, DispenseOutcome.FAILED, -1)
+                    updateTransactionProgress()
+                    finalizeTransaction()
                 }
             }
         })
+    }
+
+    private fun updateTransactionProgress() {
+        val record = TransactionRecord(
+            transaction_id = currentTransactionId,
+            time = System.currentTimeMillis(),
+            sync_status = SyncStatus.PENDING,
+            order = orderItems,
+            payment = currentPaymentInfo,
+            fulfillment = FulfillmentInfo(state = FulfillmentState.IN_PROGRESS, itemOutcomes = itemOutcomes),
+            phone = phone.ifEmpty { null }
+        )
+        TransactionRepository(this).saveTransaction(record)
+    }
+
+    private fun finalizeTransaction() {
+        progressDispense.visibility = View.GONE
+        btnDone.text = "Return to Catalog Now"
+        btnDone.visibility = View.VISIBLE
+
+        val allSuccess = itemOutcomes.all { it.status == DispenseOutcome.SUCCESS }
+        val finalState = if (allSuccess) FulfillmentState.DONE else FulfillmentState.PARTIAL
+
+        val record = TransactionRecord(
+            transaction_id = currentTransactionId,
+            time = System.currentTimeMillis(),
+            sync_status = SyncStatus.PENDING,
+            order = orderItems,
+            payment = currentPaymentInfo,
+            fulfillment = FulfillmentInfo(state = finalState, itemOutcomes = itemOutcomes),
+            phone = phone.ifEmpty { null }
+        )
+
+        TransactionRepository(this).saveTransaction(record)
+
+        if (finalState == FulfillmentState.PARTIAL) {
+            claimManager.createPendingClaimForTransaction(record)
+            txtDispenseStatus.text = "Order incomplete! Unclaimed items reserved."
+        } else {
+            txtDispenseStatus.text = "Dispense Complete! Thank you for your purchase."
+            autoLogoutHandler.postDelayed({
+                navigateToCatalog()
+            }, AUTO_LOGOUT_DELAY_MS)
+        }
     }
 
     private fun decrementStock(slotId: String, qty: Int) {
@@ -187,36 +278,37 @@ class CheckoutActivity : AppCompatActivity() {
         }
     }
 
-    private fun completeTransaction(payment: PaymentInfo, state: FulfillmentState, faultCode: Int?) {
-        progressDispense.visibility = View.GONE
-        btnDone.text = "Return to Login Now"
-        btnDone.visibility = View.VISIBLE
-
-        val record = TransactionRecord(
-            transaction_id = UUID.randomUUID().toString(),
-            time = System.currentTimeMillis(),
-            sync_status = SyncStatus.PENDING,
-            order = orderItems,
-            payment = payment,
-            fulfillment = FulfillmentInfo(state = state, fault_code = faultCode)
-        )
-
-        // Persist transaction record locally for audit/sync
-        TransactionRepository(this).saveTransaction(record)
-
-        Log.d("CheckoutActivity", "Transaction Complete JSON: ${record.toJson()}")
-
-        if (state == FulfillmentState.DONE) {
-            txtDispenseStatus.text = "Dispense Complete! Thank you for your purchase. Auto-logging out..."
+    private fun promptPhoneAndPay() {
+        val input = EditText(this).apply {
+            hint = "Enter phone number"
+            inputType = InputType.TYPE_CLASS_PHONE
         }
 
-        autoLogoutHandler.postDelayed({
-            navigateToLogin()
-        }, AUTO_LOGOUT_DELAY_MS)
+        AlertDialog.Builder(this)
+            .setTitle("Enter Phone Number")
+            .setMessage("Please enter your phone number to proceed with payment.")
+            .setView(input)
+            .setPositiveButton("Proceed") { dialog, _ ->
+                val enteredPhone = input.text.toString().trim()
+                if (enteredPhone.isEmpty()) {
+                    txtDispenseStatus.text = "Please enter a valid phone number"
+                    dialog.dismiss()
+                    return@setPositiveButton
+                }
+
+                phone = enteredPhone
+                val session = Session(phone = phone)
+                Log.d("CheckoutActivity", "Session created successfully: Phone=${session.phone}")
+
+                txtUserPhone.text = "Customer Phone: $phone"
+                processPaymentAndDispense()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
-    private fun navigateToLogin() {
-        val intent = Intent(this, LoginActivity::class.java).apply {
+    private fun navigateToCatalog() {
+        val intent = Intent(this, CatalogActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         startActivity(intent)
@@ -226,7 +318,9 @@ class CheckoutActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         autoLogoutHandler.removeCallbacksAndMessages(null)
-        serialManager?.unregisterReceiver()
-        serialManager?.disconnect()
+        if (!AppConfig.USE_MOCK_HARDWARE) {
+            serialManager?.unregisterReceiver()
+            serialManager?.disconnect()
+        }
     }
 }
